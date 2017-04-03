@@ -1,1 +1,199 @@
-hello world
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Information Visualization Project Perrone Stefano</title>
+		<script src="//d3js.org/d3.v3.min.js"></script>
+	  	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+	</head>
+		  <body>
+		<h4>ISTRUZIONI: click sinistro del mouse per avviare dell'animazione, i triangoli si sposteranno verso il bordo allontanandosi dalla posizione corrente del mouse</h4>
+<script charset="utf-8">
+$(document).ready(init());
+function init() {
+var width  = 1200;
+var height = 560;
+var sin30 = Math.pow(3,1/2)/2;
+var cos30 = .5;
+
+var color = d3.scale.category10();
+
+Nodes = [];
+G = [];
+
+started = false;
+
+		d3.select("body")
+			.append("div")
+			.attr("id","svgContainer");
+
+		svg = d3.select("#svgContainer")
+					  .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+    rectangle =  svg.append("rect")
+                    .attr("x", 0)
+                    .attr("y", 0)
+                    .attr("width", width)
+                    .attr("height", height)
+									  .attr("fill", "none")
+									  .attr("stroke","black")
+ 									  .attr("stroke-width", 2);
+
+		 $("#svgContainer").mousedown(function (e) {
+			 	if (!started) {
+			 		mouseX = e.offsetX;
+			 		mouseY = e.offsetY;
+			 		start();
+			 		started = true;
+			 	}
+		 });
+
+for (var i = 0; i < 30; i++) {
+
+  G[i] = svg.append("g")
+  			 	  .attr("id",i);
+
+  Nodes[i]=generate_triangle(i);
+
+}
+
+function generate_triangle(i){
+
+	  var x = Math.floor(Math.random() * width/256 + width/512);
+		var y = Math.floor(Math.random() * height/256 + height/512);
+		var s = Math.floor(Math.random() * 80 + 10);
+
+	  var b_temp = calculate_baricentro(x,y,s);
+		var str = b_temp.split(",-")[1];
+		var rad = str - (y*s-s);
+
+	  return  G[i].append("svg:polygon")
+	              .attr("points", function(){
+	                                         return value =  (x*s)	  		 	+','+ 	(y*s-s) 			  +' '+
+	                                                         (x*s-s*sin30) 	+','+ 	(y*s + s*cos30)	+' '+
+	                                                         (x*s+s*sin30) 	+','+ 	(y*s + s*cos30)})
+	              .attr("baricentro", b_temp)
+								.attr("radius", rad)
+	              .style("fill", function(i) { return color(Math.random() % 5); })
+	              .attr("stroke", "black")
+	              .attr("transform","translate("+b_temp+")");
+}
+
+function calculate_baricentro(x,y,s){
+
+           var y1 = (y*s-s);
+           var y2 = (y*s + s*cos30);
+           var y3 = (y*s + s*cos30);
+           var cy = (y1 + y2 + y3)/3;
+           var cx = x*s;
+           return "-"+cx+",-"+cy
+}
+
+//initialize start position
+for (var i = 0; i < 30; i++) {
+
+	var raggio = Nodes[i][0][0].attributes[2].nodeValue;
+
+	var r = Math.floor(Math.random() * 360);
+  var w = Math.floor(Math.random() * (width - 2*raggio) + 2*raggio);
+  var h = Math.floor(Math.random() * (height - 2*raggio) + 2*raggio);
+
+	//condition border limit
+	if(w+raggio>0)
+		var w1=w+raggio
+	var w1=w-raggio
+	if(h+raggio>0)
+		var h1=h+raggio
+	var h1=h-raggio
+
+	var Cx = w1.toString();
+	var Cy = h1.toString();
+	var newC = "-"+Cx+",-"+Cy;
+
+	Nodes[i][0][0].attributes[1].nodeValue = newC;
+  G[i].transition()
+      .attr("transform","translate("+w1+","+h1+"),rotate("+r+")");
+}
+
+
+$("#svgContainer").mousemove(function (e) {
+		mouseX = e.offsetX;
+		mouseY = e.offsetY;
+});
+
+k=20;
+repulsiveForce = 2;
+updateFrequency= 500;
+repulsiveFactor = (updateFrequency*repulsiveForce)/k;
+
+function start() {
+	window.setInterval(function() {
+
+		mx = mouseX;
+		my = mouseY;
+
+	for(var i=0;i<30;i++){
+
+			var c = Nodes[i][0][0].attributes[1].nodeValue;
+			var c1 = c.split("-")[1];
+			var cx = parseInt(c1.split(",")[0]);
+			var cy = parseInt(c.split(",-")[1]);
+			console.log(cx);
+
+			var raggio = Nodes[i][0][0].attributes[2].nodeValue;
+
+			var r = (Math.atan2(cy - mouseY, cx - mouseX) * 720 / Math.PI) + 90;
+
+			var deltax = cx-mx;
+			var deltay = cy-my;
+
+			var dx = (deltax/(Math.abs(deltax)+ Math.abs(deltay))) * repulsiveFactor;
+			var dy = (deltay/(Math.abs(deltax)+ Math.abs(deltay))) * repulsiveFactor;
+
+			var newCX = cx+dx;
+			var newCY = cy+dy;
+
+			//condition border limit
+			if (newCX > (width - raggio))
+						newCX = width-raggio;
+			if (newCX < raggio)
+						newCX = raggio;
+			if (newCY > (height - raggio))
+						newCY = height-raggio;
+			if (newCY < raggio)
+						newCY = raggio;
+
+			update_position(i, newCX, newCY, r);
+
+		}
+	}, updateFrequency);
+}
+			$("#svgContainer").mousemove(function (e) {
+				mouseX = e.offsetX;
+				mouseY = e.offsetY;
+			});
+
+
+}
+
+function update_position(i, dx, dy, r) {
+
+			G[i].transition()
+					.duration(updateFrequency)
+					.ease("linear")
+					.attr("transform","translate("+dx+","+dy+")rotate("+r+")");
+
+			var Cx = dx.toString();
+			var Cy = dy.toString();
+			var newC = "-"+Cx+",-"+Cy;
+
+			//save new position
+		  Nodes[i][0][0].attributes[1].nodeValue = newC;
+}
+
+
+</script>
+</body>
+</html>
